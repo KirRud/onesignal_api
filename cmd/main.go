@@ -10,7 +10,7 @@ import (
 func main() {
 	InitLogs()
 	routes := keitaro.InitRoutes()
-	log.Fatal(http.ListenAndServe(":8080", routes))
+	log.Fatal(http.ListenAndServe(":8125", routes))
 }
 
 func InitLogs() {

@@ -1,18 +1,21 @@
 package keitaro
 
 import (
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"net/url"
 	"onesignal_api/onesignal"
+	"runtime"
 )
 
 func InitRoutes() *mux.Router {
 	r := mux.NewRouter()
+	r.Use(panicRecovery)
 	routes := r.PathPrefix("/postback").Subrouter()
-
 	routes.HandleFunc("", handlePostback).Methods("GET")
+
 	return r
 }
 
@@ -28,8 +31,12 @@ func handlePostback(w http.ResponseWriter, r *http.Request) {
 	queryParams := u.Query()
 	appID := queryParams.Get("app_id")
 	userID := queryParams.Get("external_user_id")
-
 	data := queryParams.Get("tags")
+
+	var temp map[string]interface{}
+	json.Unmarshal([]byte(data), &temp)
+	newT := temp["status"].(int)
+	log.Printf("Check %v", newT)
 
 	// Отправляем в ответе
 	err, status := sendToOneSignal(data, appID, userID)
@@ -46,4 +53,22 @@ func sendToOneSignal(tags, appID, userID string) (error, int) {
 
 	err, status := osConn.UpdateUserTag(tags, appID, userID)
 	return err, status
+}
+
+func panicRecovery(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				buf := make([]byte, 2048)
+				n := runtime.Stack(buf, false)
+				buf = buf[:n]
+
+				log.Printf("recovering from err: %v\non url: %s\n%s", err, r.URL, buf)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`server got panic`))
+			}
+		}()
+
+		h.ServeHTTP(w, r)
+	})
 }
