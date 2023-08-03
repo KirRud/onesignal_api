@@ -1,7 +1,6 @@
 package keitaro
 
 import (
-	"encoding/json"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -32,11 +31,6 @@ func handlePostback(w http.ResponseWriter, r *http.Request) {
 	appID := queryParams.Get("app_id")
 	userID := queryParams.Get("external_user_id")
 	data := queryParams.Get("tags")
-
-	var temp map[string]interface{}
-	json.Unmarshal([]byte(data), &temp)
-	newT := temp["status"].(int)
-	log.Printf("Check %v", newT)
 
 	// Отправляем в ответе
 	err, status := sendToOneSignal(data, appID, userID)
